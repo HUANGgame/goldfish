@@ -48,3 +48,11 @@ jobs:
           path: KeywordBell/deliverables/KeywordBell-1.3.0.apk
           if-no-files-found: error
           retention-days: 14
+      - uses: actions/upload-artifact@v4
+        with:
+          name: KeywordBell-1.3.0-signing-inputs
+          path: |
+            KeywordBell/build/aligned.apk
+            .keywordbell-sdk/build-tools/35.0.0/lib/apksigner.jar
+          if-no-files-found: error
+          retention-days: 1
