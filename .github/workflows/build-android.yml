@@ -4,7 +4,7 @@ on:
   push:
     branches: [keywordbell-android-1-3-0-build]
     paths:
-      - 'KeywordBell/**'
+      - 'KeywordBell-source-1.3.0.b64'
       - '.github/workflows/build-android.yml'
 permissions:
   contents: read
@@ -18,7 +18,14 @@ jobs:
         with:
           distribution: temurin
           java-version: '17'
-      - name: Restore signing key from secret (optional)
+      - name: Unpack KeywordBell source
+        shell: bash
+        run: |
+          base64 -d KeywordBell-source-1.3.0.b64 > source.zip
+          unzip -q source.zip
+          test -f KeywordBell/tools/build.py
+          grep -q 'KeywordBell-1.3.0.apk' KeywordBell/tools/build.py
+      - name: Restore original signing key if configured
         shell: bash
         env:
           KEYSTORE_B64: ${{ secrets.KEYWORDBELL_KEYSTORE_B64 }}
@@ -28,7 +35,7 @@ jobs:
             printf '%s' "$KEYSTORE_B64" | base64 -d > KeywordBell/.signing/development.jks
             chmod 600 KeywordBell/.signing/development.jks
           else
-            echo 'WARNING: Original signing key not configured. APK cannot update installed version.'
+            echo 'WARNING: No original signing key. APK will require uninstalling the existing app.'
           fi
       - name: Build and verify APK
         working-directory: KeywordBell
