@@ -1,0 +1,58 @@
+name: Build KeywordBell Android 1.3.0
+on:
+  workflow_dispatch:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [keywordbell-android-1-3-0-build]
+    paths:
+      - 'KeywordBell-source-1.3.0.b64'
+      - '.github/workflows/build-android.yml'
+permissions:
+  contents: read
+jobs:
+  apk:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Unpack KeywordBell source
+        shell: bash
+        run: |
+          base64 -d KeywordBell-source-1.3.0.b64 > source.zip
+          unzip -q source.zip
+          test -f KeywordBell/tools/build.py
+          grep -q 'KeywordBell-1.3.0.apk' KeywordBell/tools/build.py
+      - name: Restore original signing key if configured
+        shell: bash
+        env:
+          KEYSTORE_B64: ${{ secrets.KEYWORDBELL_KEYSTORE_B64 }}
+        run: |
+          if [ -n "$KEYSTORE_B64" ]; then
+            mkdir -p KeywordBell/.signing
+            printf '%s' "$KEYSTORE_B64" | base64 -d > KeywordBell/.signing/development.jks
+            chmod 600 KeywordBell/.signing/development.jks
+          else
+            echo 'WARNING: No original signing key. APK will require uninstalling the existing app.'
+          fi
+      - name: Build and verify APK
+        working-directory: KeywordBell
+        run: python3 tools/build.py
+      - uses: actions/upload-artifact@v4
+        with:
+          name: KeywordBell-1.3.0-apk
+          path: KeywordBell/deliverables/KeywordBell-1.3.0.apk
+          if-no-files-found: error
+          retention-days: 14
+      - uses: actions/upload-artifact@v4
+        with:
+          name: KeywordBell-1.3.0-signing-inputs
+          path: |
+            KeywordBell/build/aligned.apk
+            .keywordbell-sdk/build-tools/35.0.0/lib/apksigner.jar
+          if-no-files-found: error
+          retention-days: 1
